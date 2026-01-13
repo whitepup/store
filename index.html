@@ -61,8 +61,8 @@
 
   
     .pricecol { min-width: 56px; text-align: center; font-weight: 900; font-size: 13px; }
-    .controlsRow { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 80px; }
-    .controlsRow .btn { padding: 4px 6px; font-size: 11px; }
+    .controlsRow { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 40px; }
+    .controlsRow .btn { padding: 3px 5px; font-size: 11px; }
     .controlsRow .small { font-size: 11px; }
 </style>
 </head>
@@ -248,57 +248,40 @@ function updateCartButton(){
     const grid = $("grid");
     grid.innerHTML = "";
     state.filtered.forEach(it=>{
-      const s = (it.status||"available").toLowerCase();
-      const disabled = (s==="pending"||s==="sold");
-      const inCart = state.cart[it.release_id]||0;
+      const inCart = state.cart[it.release_id] ? 1 : 0;
 
       const card = document.createElement("div");
       card.className = "card";
 
+      // Price on far left
       const priceCol = document.createElement("div");
       priceCol.className = "pricecol";
       const priceText = money(it.price);
       priceCol.textContent = priceText || "";
 
-      const img = document.createElement("img");
-      img.className = "cover";
-      img.loading = "lazy";
-      img.src = it.img || "";
-      img.alt = `${it.artist || ""} — ${it.title || ""}`.trim();
-      img.onerror = ()=>{ img.style.visibility="hidden"; };
-
-      const meta = document.createElement("div");
-      meta.className = "meta";
-      meta.innerHTML = `
-        <div class="artist">${escapeHtml(it.artist || "")}</div>
-        <div class="title2">${escapeHtml(it.title || "")}</div>
-      `;
-
+      // Vertical controls column next: -, +, ? buttons
       const controls = document.createElement("div");
       controls.className = "controlsRow";
 
       const minus = document.createElement("button");
       minus.className = "btn";
       minus.textContent = "-";
-      minus.disabled = disabled || inCart<=0;
+      minus.disabled = inCart <= 0;
       minus.onclick = ()=>{
-        state.cart[it.release_id] = Math.max(0, (state.cart[it.release_id]||0) - 1);
-        if(state.cart[it.release_id]===0) delete state.cart[it.release_id];
-        saveCart(); updateCartButton(); applyFilters();
+        if(!state.cart[it.release_id]) return;
+        delete state.cart[it.release_id];
+        saveCart(); updateCartButton(); render();
       };
 
       const plus = document.createElement("button");
       plus.className = "btn";
       plus.textContent = "+";
-      plus.disabled = disabled;
+      plus.disabled = inCart > 0;
       plus.onclick = ()=>{
-        state.cart[it.release_id] = (state.cart[it.release_id]||0) + 1;
-        saveCart(); updateCartButton(); applyFilters();
+        if(state.cart[it.release_id]) return;
+        state.cart[it.release_id] = 1;
+        saveCart(); updateCartButton(); render();
       };
-
-      const qty = document.createElement("span");
-      qty.className = "small muted";
-      qty.textContent = inCart ? `In cart: ${inCart}` : "";
 
       const infoBtn = document.createElement("button");
       infoBtn.className = "btn";
@@ -307,13 +290,28 @@ function updateCartButton(){
 
       controls.appendChild(minus);
       controls.appendChild(plus);
-      controls.appendChild(qty);
       controls.appendChild(infoBtn);
 
+      // Image next
+      const img = document.createElement("img");
+      img.className = "cover";
+      img.loading = "lazy";
+      img.src = it.img || "";
+      img.alt = `${it.artist || ""} — ${it.title || ""}`.trim();
+      img.onerror = ()=>{ img.style.visibility="hidden"; };
+
+      // Title + artist stacked vertically to the right
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.innerHTML = `
+        <div class="artist">${escapeHtml(it.artist || "")}</div>
+        <div class="title2">${escapeHtml(it.title || "")}</div>
+      `;
+
       card.appendChild(priceCol);
+      card.appendChild(controls);
       card.appendChild(img);
       card.appendChild(meta);
-      card.appendChild(controls);
 
       grid.appendChild(card);
     });
