@@ -17,15 +17,15 @@
     .btn:disabled { opacity: .45; cursor: not-allowed; }
     .cartbtn { margin-left: auto; white-space: nowrap; }
     .content { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 14px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
-    .card { border: 1px solid #eee; border-radius: 14px; padding: 12px; display: flex; gap: 12px; }
-    .cover { width: 88px; height: 88px; border-radius: 10px; object-fit: cover; background: #f5f5f5; flex: 0 0 auto; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+    .card { border: 1px solid #eee; border-radius: 10px; padding: 6px 8px; display: flex; align-items: center; gap: 8px; }
+    .cover { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: #f5f5f5; flex: 0 0 auto; }
     .meta { flex: 1 1 auto; min-width: 0; }
     .artist { font-weight: 800; }
     .title2 { margin-top: 2px; }
     .line { margin-top: 6px; font-size: 12px; color: #333; }
     .muted { color: #666; }
-    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+    .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
     .price { font-weight: 900; }
     .badge { font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid #ddd; background: #fafafa; }
     .badge.pending { background: #fff4b8; border-color: #e5d27a; }
@@ -59,7 +59,12 @@
 .cartrow .meta { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
 #cartText { overflow-x: hidden; white-space: pre-wrap; }
 
-  </style>
+  
+    .pricecol { min-width: 56px; text-align: center; font-weight: 900; font-size: 13px; }
+    .controlsRow { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 80px; }
+    .controlsRow .btn { padding: 4px 6px; font-size: 11px; }
+    .controlsRow .small { font-size: 11px; }
+</style>
 </head>
 <body>
   <div class="header">
@@ -248,43 +253,33 @@ function updateCartButton(){
       const inCart = state.cart[it.release_id]||0;
 
       const card = document.createElement("div");
-      card.className="card";
+      card.className = "card";
+
+      const priceCol = document.createElement("div");
+      priceCol.className = "pricecol";
+      const priceText = money(it.price);
+      priceCol.textContent = priceText || "";
 
       const img = document.createElement("img");
-      img.className="cover";
-      img.alt = `${it.artist} - ${it.title}`;
-      img.src = it.img || "";
+      img.className = "cover";
       img.loading = "lazy";
-      card.appendChild(img);
+      img.src = it.img || "";
+      img.alt = `${it.artist || ""} — ${it.title || ""}`.trim();
+      img.onerror = ()=>{ img.style.visibility="hidden"; };
 
       const meta = document.createElement("div");
-      meta.className="meta";
+      meta.className = "meta";
       meta.innerHTML = `
         <div class="artist">${escapeHtml(it.artist || "")}</div>
         <div class="title2">${escapeHtml(it.title || "")}</div>
-        <div class="line">
-          <span class="nowrap">${escapeHtml(it.year || "?" )}</span>
-          <span class="muted">•</span>
-          <span class="nowrap">${escapeHtml(it.label || "")}</span>
-          <span class="muted">•</span>
-          <span class="nowrap">${escapeHtml(it.catno || "")}</span>
-        </div>
-        <div class="line muted">${escapeHtml(it.genre || "")}${it.style ? " • " + escapeHtml(it.style) : ""}</div>
-        <div class="row">
-          ${badge(it.status)}
-          ${it.price ? `<span class="price">${escapeHtml(money(it.price))}</span>` : ""}
-          ${it.qty>1 ? `<span class="qtypill">Qty: ${it.qty}</span>` : ""}
-        </div>
       `;
-      card.appendChild(meta);
 
-      const row = document.createElement("div");
-      row.className="row";
-      row.style.marginTop="10px";
+      const controls = document.createElement("div");
+      controls.className = "controlsRow";
 
       const minus = document.createElement("button");
-      minus.className="btn";
-      minus.textContent="-";
+      minus.className = "btn";
+      minus.textContent = "-";
       minus.disabled = disabled || inCart<=0;
       minus.onclick = ()=>{
         state.cart[it.release_id] = Math.max(0, (state.cart[it.release_id]||0) - 1);
@@ -293,8 +288,8 @@ function updateCartButton(){
       };
 
       const plus = document.createElement("button");
-      plus.className="btn";
-      plus.textContent="+";
+      plus.className = "btn";
+      plus.textContent = "+";
       plus.disabled = disabled;
       plus.onclick = ()=>{
         state.cart[it.release_id] = (state.cart[it.release_id]||0) + 1;
@@ -302,18 +297,28 @@ function updateCartButton(){
       };
 
       const qty = document.createElement("span");
-      qty.className="small muted";
-      qty.textContent = `In cart: ${inCart}`;
+      qty.className = "small muted";
+      qty.textContent = inCart ? `In cart: ${inCart}` : "";
 
-      row.appendChild(minus);
-      row.appendChild(plus);
-      row.appendChild(qty);
+      const infoBtn = document.createElement("button");
+      infoBtn.className = "btn";
+      infoBtn.textContent = "?";
+      infoBtn.onclick = ()=>openItemModal(it);
 
-      meta.appendChild(row);
+      controls.appendChild(minus);
+      controls.appendChild(plus);
+      controls.appendChild(qty);
+      controls.appendChild(infoBtn);
+
+      card.appendChild(priceCol);
+      card.appendChild(img);
+      card.appendChild(meta);
+      card.appendChild(controls);
 
       grid.appendChild(card);
     });
     setFilterOptions();
+
   }
 
   function escapeHtml(s){
@@ -323,6 +328,40 @@ function updateCartButton(){
       .replaceAll(">","&gt;")
       .replaceAll('"',"&quot;")
       .replaceAll("'","&#39;");
+  }
+
+
+  function openItemModal(it){
+    const modal = $("itemModal");
+    if(!modal) return;
+    const titleEl = $("itemModalTitle");
+    const bodyEl = $("itemModalBody");
+    if(titleEl){
+      titleEl.textContent = [it.artist || "", it.title || ""].filter(Boolean).join(" — ");
+    }
+    if(bodyEl){
+      const year = it.year || "?";
+      const label = it.label || "";
+      const catno = it.catno || "";
+      const genre = it.genre || "";
+      bodyEl.innerHTML = `
+        <p><b>Year:</b> ${escapeHtml(year)}</p>
+        <p><b>Label:</b> ${escapeHtml(label)}</p>
+        <p><b>Catalog #:</b> ${escapeHtml(catno)}</p>
+        <p><b>Genre:</b> ${escapeHtml(genre)}</p>
+      `;
+    }
+    modal.style.display = "flex";
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden","false");
+  }
+
+  function closeItemModal(){
+    const modal = $("itemModal");
+    if(!modal) return;
+    modal.style.display = "none";
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden","true");
   }
 
   function openCart(){
@@ -343,7 +382,10 @@ $("modal").classList.add("open");
     loadCart();
     updateCartButton();
 
-    $("q").addEventListener("input", ()=>applyFilters());
+    const itemClose = $("itemModalClose");
+    if(itemClose){ itemClose.addEventListener("click", closeItemModal); }
+
+$("q").addEventListener("input", ()=>applyFilters());
     $("artist").addEventListener("change", ()=>applyFilters());
     $("genre").addEventListener("change", ()=>applyFilters());
     $("decade").addEventListener("change", ()=>applyFilters());
@@ -392,6 +434,17 @@ $("modal").classList.add("open");
   boot();
 })();
 </script>
+
+
+<div id="itemModal" class="modal" aria-hidden="true" style="display:none">
+  <div class="modalbox">
+    <div class="modalhead">
+      <h2 id="itemModalTitle">Record details</h2>
+      <button id="itemModalClose" class="btn close">Close</button>
+    </div>
+    <div class="modal-body small" id="itemModalBody" style="overflow-y:auto;max-height:70vh;"></div>
+  </div>
+</div>
 
 <div id="helpModal" class="modal" aria-hidden="true" style="display:none">
   <div class="modalbox">
